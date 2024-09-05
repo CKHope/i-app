@@ -1,50 +1,70 @@
-import streamlit as st
-from pydub import AudioSegment
 import os
-import tempfile
+from pydub import AudioSegment
+import streamlit as st
+import io
+import glob
 
-# Streamlit App
-st.title("M4A Audio Tripling and Combining App (Online with ffmpeg-python)")
+# Function to convert, triple, and combine audio files
+def process_audio(uploaded_files):
+    # Define folder paths
+    output_folder = "mp3output"
+    tripled_output_folder = "tripled_mp3output"
+    combined_output_file = "combined_tripled.mp3"
 
-# File Uploader to upload multiple M4A files
-uploaded_files = st.file_uploader("Choose M4A files", accept_multiple_files=True, type=['m4a'])
+    # Create the output and tripled output folders if they don't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    if not os.path.exists(tripled_output_folder):
+        os.makedirs(tripled_output_folder)
+
+    combined_audio = AudioSegment.empty()
+    
+    for uploaded_file in uploaded_files:
+        # Read the file
+        audio = AudioSegment.from_file(uploaded_file, format="m4a")
+        
+        # Convert to mp3
+        mp3_output_path = os.path.join(output_folder, f"{uploaded_file.name}.mp3")
+        audio.export(mp3_output_path, format="mp3")
+        
+        # Triple the audio
+        mp3_audio = AudioSegment.from_file(mp3_output_path, format="mp3")
+        tripled_audio = mp3_audio + mp3_audio + mp3_audio
+        
+        # Save tripled audio
+        tripled_mp3_output_path = os.path.join(tripled_output_folder, f"{uploaded_file.name}_tripled.mp3")
+        tripled_audio.export(tripled_mp3_output_path, format="mp3")
+        
+        # Combine tripled audio
+        tripled_audio_file = AudioSegment.from_file(tripled_mp3_output_path, format="mp3")
+        combined_audio += tripled_audio_file
+
+    # Export the combined audio
+    combined_audio.export(combined_output_file, format="mp3")
+    
+    return combined_output_file
+
+# Streamlit app
+st.title("M4A to MP3 Conversion and Combining App")
+
+st.write("Upload your M4A files here:")
+
+# File uploader
+uploaded_files = st.file_uploader("Choose M4A files", type=["m4a"], accept_multiple_files=True)
 
 if uploaded_files:
-    # Button to start the process
-    if st.button("Process and Combine Audio"):
-        combined_audio = AudioSegment.empty()  # Initialize an empty audio segment
-        st.write("Processing files...")
-
-        for uploaded_file in uploaded_files:
-            # Create a temporary file to store the uploaded file content
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".m4a") as tmp_file:
-                tmp_file.write(uploaded_file.read())
-                temp_file_path = tmp_file.name
-
-            # Load the audio file from the temporary path using pydub and ffmpeg
-            audio = AudioSegment.from_file(temp_file_path, format="m4a")
-
-            # Triple the audio by concatenating it with itself 3 times
-            tripled_audio = audio + audio + audio
-
-            # Append the tripled audio to the combined audio
-            combined_audio += tripled_audio
-
-            # Remove the temporary file
-            os.remove(temp_file_path)
-
-        # Output file name
-        output_audio_file = "combined_audio_output.mp3"
-
-        # Export the final combined audio to an mp3 file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_out_file:
-            combined_audio.export(tmp_out_file.name, format="mp3")
-            output_audio_file = tmp_out_file.name
-
-        # Provide a download link for the final audio
-        with open(output_audio_file, "rb") as file:
-            st.download_button("Download Combined Audio", file, file_name="combined_audio_output.mp3")
-
-        # Clean up the output file
-        os.remove(output_audio_file)
-        st.success("Audio processing complete!")
+    # Process files and show progress
+    with st.spinner('Processing...'):
+        combined_file = process_audio(uploaded_files)
+    
+    # Provide download link for the combined file
+    with open(combined_file, "rb") as f:
+        st.download_button(
+            label="Download Combined MP3",
+            data=f,
+            file_name="combined_tripled.mp3",
+            mime="audio/mp3"
+        )
+    
+    st.success('Processing complete!')
