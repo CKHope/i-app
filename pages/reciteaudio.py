@@ -3,12 +3,8 @@ from pydub import AudioSegment
 import os
 import tempfile
 
-# Ensure ffmpeg is available via imageio
-import imageio
-imageio.plugins.ffmpeg.download()
-
 # Streamlit App
-st.title("M4A Audio Tripling and Combining App (Online)")
+st.title("M4A Audio Tripling and Combining App (Online with ffmpeg-python)")
 
 # File Uploader to upload multiple M4A files
 uploaded_files = st.file_uploader("Choose M4A files", accept_multiple_files=True, type=['m4a'])
@@ -25,7 +21,7 @@ if uploaded_files:
                 tmp_file.write(uploaded_file.read())
                 temp_file_path = tmp_file.name
 
-            # Load the audio file from the temporary path
+            # Load the audio file from the temporary path using pydub and ffmpeg
             audio = AudioSegment.from_file(temp_file_path, format="m4a")
 
             # Triple the audio by concatenating it with itself 3 times
