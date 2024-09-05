@@ -1,6 +1,7 @@
 import streamlit as st
 from moviepy.editor import VideoFileClip, concatenate_audioclips
 import os
+import tempfile
 
 # Streamlit App
 st.title("MP4 Audio Tripling and Combining App")
@@ -15,12 +16,13 @@ if uploaded_files:
         st.write("Processing files...")
 
         for uploaded_file in uploaded_files:
-            # Save the file temporarily
-            with open(uploaded_file.name, "wb") as f:
-                f.write(uploaded_file.read())
+            # Create a temporary file to store the uploaded file content
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
+                tmp_file.write(uploaded_file.read())
+                temp_file_path = tmp_file.name
 
-            # Load the video file
-            clip = VideoFileClip(uploaded_file.name)
+            # Load the video file from the temporary path
+            clip = VideoFileClip(temp_file_path)
 
             # Extract the audio
             audio = clip.audio
@@ -31,8 +33,8 @@ if uploaded_files:
             # Append the tripled audio to the list
             tripled_audio_clips.append(tripled_audio)
 
-            # Remove the temporarily saved file
-            os.remove(uploaded_file.name)
+            # Remove the temporary file
+            os.remove(temp_file_path)
 
         # Concatenate all the tripled audio clips into one final audio file
         final_audio_clip = concatenate_audioclips(tripled_audio_clips)
